@@ -8,7 +8,7 @@
         "build": "massa-as-compile",
         "clean": "rimraf build",
         "deploy": "npm run build && tsx src/deploy.ts",
-        "hello": "tsx src/hello.ts",
+        "test-lotto": "tsx src/test-lotto-5-40.ts",
         "prettier": "prettier '**/src/**/*.ts' --check && as-prettier --check assembly",
         "prettier:fix": "prettier '**/src/**/*.ts' --write && as-prettier --write assembly",
         "lint": "eslint .",
@@ -49,6 +49,8 @@
         "node": ">=16"
     },
     "dependencies": {
-        "@massalabs/sc-standards": "^1.3.0"
+        "@massalabs/sc-standards": "^1.3.0",
+        "json-as": "^0.9.29",
+        "visitor-as": "^0.11.4"
     }
 }

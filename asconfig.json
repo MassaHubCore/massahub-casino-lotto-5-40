@@ -9,5 +9,8 @@
             "exportRuntime": true,
             "bindings": false
         }
+    },
+    "options": {
+        "transform": ["json-as/transform"]
     }
 }
