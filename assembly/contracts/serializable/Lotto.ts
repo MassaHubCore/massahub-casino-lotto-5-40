@@ -4,8 +4,9 @@ import { Ticket } from './Ticket';
 @json
 export class Lotto {
   round: u64;
-  startDate: u64;
-  endDate: u64;
+  startDate: i64;
+  endDate: i64;
+  price: u8;
   deposit: u64;
   winningNumbers: u8[];
   winners50: Ticket[];
@@ -16,6 +17,7 @@ export class Lotto {
     round: u64,
     startDate: u64,
     endDate: u64,
+    price: u8,
     deposit: u64,
     winningNumbers: u8[],
     winners50: Ticket[],
@@ -25,6 +27,7 @@ export class Lotto {
     this.round = round;
     this.startDate = startDate;
     this.endDate = endDate;
+    this.price = price;
     this.deposit = deposit;
     this.winningNumbers = winningNumbers;
     this.winners50 = winners50;

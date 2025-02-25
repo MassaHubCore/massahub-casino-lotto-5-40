@@ -14,6 +14,10 @@ export class Ticket {
     return JSON.stringify(this);
   }
 
+  public static serializeArray(tickets: Ticket[]): string {
+    return JSON.stringify(tickets);
+  }
+
   public static deserialize(data: string): Ticket {
     return JSON.parse<Ticket>(data);
   }

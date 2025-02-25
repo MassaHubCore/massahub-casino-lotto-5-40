@@ -1,38 +1,118 @@
-import { Context, generateEvent, Storage } from '@massalabs/massa-as-sdk';
-import { stringToBytes } from '@massalabs/as-types';
+import { Context, generateEvent, Storage, balanceOf, transferCoins, Address } from '@massalabs/massa-as-sdk';
+import { stringToBytes, Args } from '@massalabs/as-types';
 import { onlyOwner } from '@massalabs/sc-standards/assembly/contracts/utils/ownership';
-import { LOTTO_, LOTTO_ROUND_COUNT, OWNER, TICKET_, TICKET_COUNT } from './utils/tags';
+import { LOTTO_, LOTTO_ROUND_COUNT, OWNER, TICKET_, TICKET_COUNT, TICKET_PRICE } from './utils/tags';
 import { Lotto } from './serializable/Lotto';
 import { Ticket } from './serializable/Ticket';
 
 export function constructor(_: StaticArray<u8>): void {
   assert(Context.isDeployingContract());
-
   Storage.set(OWNER, Context.caller().toString());
   Storage.set(LOTTO_ROUND_COUNT, '0');
   Storage.set(TICKET_COUNT, '0');
+  Storage.set(TICKET_PRICE, '10');
   initLotto();
 }
 
-export function getCurrentLotto(): StaticArray<u8> {
-  const lottoRoundCount = Storage.get(LOTTO_ROUND_COUNT);
-  return Storage.get(stringToBytes(LOTTO_.concat(lottoRoundCount.toString())));
-}
-
-export function initLotto(): void {
+// @ts-ignore
+@inline
+function initLotto(): void {
   onlyOwner();
   const lottoRoundCount = Storage.get(LOTTO_ROUND_COUNT);
-
   const newLottoCount = u64.parse(lottoRoundCount) + 1;
   Storage.set(LOTTO_ROUND_COUNT, newLottoCount.toString());
-  const lotto = new Lotto(newLottoCount, 0, 0, 0, [], [], [], []);
+
+  const startDate = Date.now();
+  const endDate = startDate + 23 * 60 * 60 * 1000;
+  const ticketPrice = u8.parse(Storage.get(TICKET_PRICE));
+  const lotto = new Lotto(newLottoCount, startDate, endDate, ticketPrice, 0, [], [], [], []);
   Storage.set(
     LOTTO_.concat(newLottoCount.toString()),
     lotto.serialize(),
   );
 
   generateEvent(`lottery round ${newLottoCount} begins`);
-  finalizeLotto();
+}
+
+export function getTicketPrice(): StaticArray<u8> {
+  onlyOwner();
+  return stringToBytes(Storage.get(TICKET_PRICE));
+}
+
+export function updateTicketPrice(binaryArgs: StaticArray<u8>): void {
+  onlyOwner();
+  const args = new Args(binaryArgs);
+  const price = args.nextString()
+    .expect('Missing price');
+  Storage.set(TICKET_PRICE, price);
+}
+
+export function getCurrentLotto(): StaticArray<u8> {
+  const lottoRoundCount = Storage.get(LOTTO_ROUND_COUNT);
+  const sLotto = Storage.get(LOTTO_.concat(lottoRoundCount.toString()));
+  const lotto = Lotto.deserialize(sLotto);
+  const dateNow = Date.now();
+  assert(dateNow < lotto.endDate, `Lottery round ${lottoRoundCount} is over`);
+  return stringToBytes(sLotto);
+}
+
+export function buyTicket(binaryArgs: StaticArray<u8>): void {
+  const args = new Args(binaryArgs);
+  const sTicket = args.nextString()
+    .expect('Missing ticket arguments');
+  let ticket = Ticket.deserialize(sTicket);
+  assert(ticket.numbers.length === 5, 'Wrong ticket format');
+  for (let i: u8 = 0; i < 5; i++) {
+    assert(
+      ticket.numbers[i] >= 0,
+      `Wrong ticket format, selected numbers can't be negative, ${ticket.serialize()}, `,
+    );
+    assert(
+      ticket.numbers[i] <= 40,
+      `Wrong ticket format, selected numbers can't be higher than 40, ${ticket.serialize()}`,
+    );
+  }
+
+  const lottoRoundCount = Storage.get(LOTTO_ROUND_COUNT);
+  const sLotto = Storage.get(LOTTO_.concat(lottoRoundCount.toString()));
+
+  const buyer = Context.caller().toString();
+  const lotto = Lotto.deserialize(sLotto);
+  const amount = u64.parse(lotto.price.toString()) * 10 ** 8;
+  const buyerBalance = balanceOf(buyer);
+  assert(
+    buyerBalance > amount,
+    `Insufficient balance to buy ticket, current balance for ${buyer} is ${buyerBalance}
+    , the current price is ${amount}`,
+  );
+  transferCoins(new Address('AU1jHByejYjrarym3RwcvXk8KAKeXFzpfqPZcH3TirZF5cj5cZKY'), amount);
+
+  ticket.address = buyer;
+  const ticketCount = u8.parse(Storage.get(TICKET_COUNT));
+  const newTicketCount = ticketCount + 1;
+  lotto.deposit = lotto.deposit + lotto.price;
+  Storage.set(LOTTO_.concat(lottoRoundCount.toString()), lotto.serialize());
+  Storage.set(TICKET_.concat(newTicketCount.toString()), ticket.serialize());
+  Storage.set(TICKET_COUNT, newTicketCount.toString());
+}
+
+export function getTickets(): StaticArray<u8> {
+  const response: Ticket[] = [];
+  const address = Context.caller().toString();
+  const ticketCount = u8.parse(Storage.get(TICKET_COUNT));
+  for (let i: u8 = 1; i <= ticketCount; i++) {
+    if (Storage.has(TICKET_.concat(i.toString()))) {
+      const args = Storage.get(
+        TICKET_.concat(i.toString()),
+      );
+      const ticket = Ticket.deserialize(args);
+      if (ticket.address == address) {
+        response.push(ticket);
+      }
+    }
+  }
+
+  return stringToBytes(Ticket.serializeArray(response));
 }
 
 export function finalizeLotto(): void {
