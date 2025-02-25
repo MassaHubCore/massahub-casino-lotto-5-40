@@ -62,6 +62,11 @@ export function buyTicket(binaryArgs: StaticArray<u8>): void {
     .expect('Missing ticket arguments');
   let ticket = Ticket.deserialize(sTicket);
   assert(ticket.numbers.length === 5, 'Wrong ticket format');
+  const b = new Set();
+  for (let i = 0; i < ticket.numbers.length; i++) {
+    b.add(ticket.numbers[i]);
+  }
+  assert(b.size === ticket.numbers.length, 'Wrong ticket format, no duplications allowed');
   for (let i: u8 = 0; i < 5; i++) {
     assert(
       ticket.numbers[i] >= 1,
