@@ -64,7 +64,7 @@ export function buyTicket(binaryArgs: StaticArray<u8>): void {
   assert(ticket.numbers.length === 5, 'Wrong ticket format');
   for (let i: u8 = 0; i < 5; i++) {
     assert(
-      ticket.numbers[i] >= 0,
+      ticket.numbers[i] >= 1,
       `Wrong ticket format, selected numbers can't be negative, ${ticket.serialize()}, `,
     );
     assert(
