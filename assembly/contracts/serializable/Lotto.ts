@@ -35,11 +35,15 @@ export class Lotto {
     this.winners20 = winners20;
   }
 
+  public static deserialize(data: string): Lotto {
+    return JSON.parse<Lotto>(data);
+  }
+
   public serialize(): string {
     return JSON.stringify(this);
   }
 
-  public static deserialize(data: string): Lotto {
-    return JSON.parse<Lotto>(data);
+  public static serializeArray(lotto: Lotto[]): string {
+    return JSON.stringify(lotto);
   }
 }
