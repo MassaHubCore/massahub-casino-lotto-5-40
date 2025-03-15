@@ -47,7 +47,7 @@ export function initLotto(): void {
 
   // init new lotto
   const startDate = Date.now();
-  const endDate = (startDate + 5 * 60 * 1000) - 16 * 1000;
+  const endDate = (startDate + 60 * 60 * 1000) - 16 * 1000;
   const ticketPrice = u8.parse(Storage.get(TICKET_PRICE));
   const lotto = new Lotto(newLottoCount, startDate, endDate, ticketPrice, 0, [], [], [], []);
   Storage.set(
@@ -168,7 +168,7 @@ export function buyTicket(binaryArgs: StaticArray<u8>): void {
   Storage.set(LOTTO_.concat(lottoRoundCount.toString()), lotto.serialize());
   Storage.set(TICKET_.concat(newTicketCount.toString()), ticket.serialize());
   Storage.set(TICKET_COUNT, newTicketCount.toString());
-  generateEvent(`New ticket ${ticket.serialize()} has successfully saved`);
+  generateEvent(`New ticket ${ticketCount} - ${ticket.serialize()} has successfully saved`);
 }
 
 export function getTickets(): StaticArray<u8> {
@@ -290,7 +290,7 @@ export function payWinners50(binaryArgs: StaticArray<u8>): void {
     'The caller must be the contract itself',
   );
   generateEvent(`Start paying jackpot winners`);
-  const args = new Args(binaryArgs); 
+  const args = new Args(binaryArgs);
   const round = args.nextString().unwrap();
 
   const lArgs = Storage.get(
@@ -299,7 +299,8 @@ export function payWinners50(binaryArgs: StaticArray<u8>): void {
 
   const lotto = Lotto.deserialize(lArgs);
   let deposit = <number>lotto.deposit;
-  let jackpot = u64.parse(Math.floor(deposit * 0.5 / lotto.winners50.length).toString());
+  const winnersLength = lotto.winners50.length == 0 ? 1 : lotto.winners50.length;
+  let jackpot = u64.parse(Math.floor(deposit * 0.5 / winnersLength).toString());
   generateEvent(`Prize jackpot - ${jackpot} MAS`);
 
   if (lotto.winners50.length != 0) {
@@ -340,7 +341,8 @@ export function payWinners30(binaryArgs: StaticArray<u8>): void {
 
   const lotto = Lotto.deserialize(lArgs);
   let deposit = <number>lotto.deposit;
-  let thirty = u64.parse(Math.floor(deposit * 0.3 / lotto.winners30.length).toString());
+  const winnersLength = lotto.winners30.length == 0 ? 1 : lotto.winners30.length;
+  let thirty = u64.parse(Math.floor(deposit * 0.3 / winnersLength).toString());
   generateEvent(`Prize for 4 numbers - ${thirty} MAS`);
 
 
@@ -382,7 +384,8 @@ export function payWinners20(binaryArgs: StaticArray<u8>): void {
 
   const lotto = Lotto.deserialize(lArgs);
   let deposit = <number>lotto.deposit;
-  let twenty = u64.parse(Math.floor(deposit * 0.2 / lotto.winners20.length).toString());
+  const winnersLength = lotto.winners20.length == 0 ? 1 : lotto.winners20.length;
+  let twenty = u64.parse(Math.floor(deposit * 0.2 / winnersLength).toString());
   generateEvent(`Prize for 3 numbers - ${twenty} MAS`);
 
   if (lotto.winners20.length != 0) {
