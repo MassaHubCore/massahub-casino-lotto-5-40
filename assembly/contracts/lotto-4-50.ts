@@ -103,7 +103,7 @@ export function getHistoryOfLotto(): StaticArray<u8> {
   const lottoRoundCount = Storage.get(LOTTO_ROUND_COUNT);
   let iLottoRoundCount = u64.parse(lottoRoundCount) - 1;
   let index = 1;
-  while (index <= 7) {
+  while (index <= 5) {
     if (iLottoRoundCount > 0) {
       if (Storage.has(LOTTO_.concat(iLottoRoundCount.toString()))) {
         const sLotto = Storage.get(LOTTO_.concat(iLottoRoundCount.toString()));
@@ -164,6 +164,7 @@ export function buyTicket(binaryArgs: StaticArray<u8>): void {
   ticket.address = buyer;
   const ticketCount = u8.parse(Storage.get(TICKET_COUNT));
   const newTicketCount = ticketCount + 1;
+  ticket.no = newTicketCount;
   lotto.deposit = lotto.deposit + lotto.price;
   Storage.set(LOTTO_.concat(lottoRoundCount.toString()), lotto.serialize());
   Storage.set(TICKET_.concat(newTicketCount.toString()), ticket.serialize());

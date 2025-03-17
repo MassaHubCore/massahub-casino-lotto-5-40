@@ -4,10 +4,12 @@ import { JSON } from 'json-as';
 export class Ticket {
   address: string;
   numbers: u8[];
+  no: u8;
 
-  constructor(address: string, numbers: u8[]) {
+  constructor(address: string, numbers: u8[], no: u8) {
     this.address = address;
     this.numbers = numbers;
+    this.no = no;
   }
 
   public serialize(): string {
