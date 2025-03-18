@@ -8,6 +8,8 @@ export class Lotto {
   endDate: i64;
   price: u8;
   deposit: u64;
+  initialDeposit: u64;
+  moneyWon: u64;
   winningNumbers: u8[];
   winners50: Ticket[];
   winners30: Ticket[];
@@ -20,6 +22,8 @@ export class Lotto {
     endDate: u64,
     price: u8,
     deposit: u64,
+    initialDeposit: u64,
+    moneyWon: u64,
     winningNumbers: u8[],
     winners50: Ticket[],
     winners30: Ticket[],
@@ -31,6 +35,8 @@ export class Lotto {
     this.endDate = endDate;
     this.price = price;
     this.deposit = deposit;
+    this.initialDeposit = initialDeposit;
+    this.moneyWon = moneyWon;
     this.winningNumbers = winningNumbers;
     this.winners50 = winners50;
     this.winners30 = winners30;

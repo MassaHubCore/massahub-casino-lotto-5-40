@@ -30,16 +30,21 @@ export function constructor(_: StaticArray<u8>): void {
   Storage.set(LOTTO_ROUND_COUNT, '0');
   Storage.set(TICKET_COUNT, '0');
   Storage.set(TICKET_PRICE, '10');
-  initLotto();
+  const args = new Args().add('0').serialize();
+  initLotto(args);
 }
 
-export function initLotto(): void {
+export function initLotto(binaryArgs: StaticArray<u8>): void {
   // validate owner
   const owner = Storage.get(OWNER_KEY);
   assert(
     Context.callee() === Context.caller() || Context.caller().toString() === owner,
     'The caller must be the contract itself',
   );
+
+  const args = new Args(binaryArgs);
+  const bInitialDeposit = args.nextString().unwrap();
+  const initialDeposit = u64.parse(bInitialDeposit);
 
   // init new lotto round count
   const lottoRoundCount = Storage.get(LOTTO_ROUND_COUNT);
@@ -50,7 +55,19 @@ export function initLotto(): void {
   const startDate = Date.now();
   const endDate = (startDate + 60 * 60 * 1000) - (16 * 1000);
   const ticketPrice = u8.parse(Storage.get(TICKET_PRICE));
-  const lotto = new Lotto(newLottoCount, startDate, endDate, ticketPrice, 0, [], [], [], [], true);
+  const lotto = new Lotto(
+    newLottoCount,
+    startDate, endDate,
+    ticketPrice,
+    initialDeposit,
+    initialDeposit,
+    0,
+    [],
+    [],
+    [],
+    [],
+    true,
+  );
   Storage.set(
     LOTTO_.concat(newLottoCount.toString()),
     lotto.serialize(),
@@ -127,8 +144,7 @@ export function buyTicket(binaryArgs: StaticArray<u8>): void {
   const lottoRoundCount = Storage.get(LOTTO_ROUND_COUNT);
   const sLotto = Storage.get(LOTTO_.concat(lottoRoundCount.toString()));
   const lotto = Lotto.deserialize(sLotto);
-  const dateNow = Date.now();
-  assert(dateNow < lotto.endDate, `Lottery round ${lottoRoundCount} is over`);
+  assert(lotto.isActive, `Lottery round ${lottoRoundCount} is over`);
 
   // validate args from ticket
   const args = new Args(binaryArgs);
@@ -275,25 +291,6 @@ export function finalizeLotto(): void {
     new Args().add(lotto.round.toString()).serialize(),
   );
   generateEvent(`Start paying at ${validityStartPeriodP} - ${validityEndPeriodP} period`);
-
-  // send event in future to start new round
-  const validityStartPeriodNewRound =
-    Context.currentPeriod() + 18;
-  const validityEndPeriodNewRound =
-    Context.currentPeriod() + 19;
-  sendMessage(
-    Context.callee(),
-    'initLotto',
-    validityStartPeriodNewRound,
-    0,
-    validityEndPeriodNewRound,
-    31,
-    MAX_GAS_ASYNC_FT,
-    ASC_FEE,
-    0,
-    new Args().serialize(),
-  );
-  generateEvent(`New round will start at ${validityStartPeriodNewRound} - ${validityEndPeriodNewRound} period`);
 }
 
 export function payWinners50(binaryArgs: StaticArray<u8>): void {
@@ -315,14 +312,17 @@ export function payWinners50(binaryArgs: StaticArray<u8>): void {
   const winnersLength = lotto.winners50.length == 0 ? 1 : lotto.winners50.length;
   let jackpot = u64.parse(Math.floor(deposit * 0.5 / winnersLength).toString());
   generateEvent(`Prize jackpot - ${jackpot} MAS`);
-
+  let moneyWon: u64 = 0;
   if (lotto.winners50.length != 0) {
     let amount = jackpot * 10 ** 9;
     for (let i = 0; i < lotto.winners50.length; i++) {
       generateEvent(`Sending jackpot prize ${amount} MAS to ${lotto.winners50[i].address}`);
       transferCoins(new Address(lotto.winners50[i].address), amount);
+      moneyWon = moneyWon + jackpot;
     }
   }
+
+  generateEvent(`Money won at jackpot ${moneyWon}`);
 
   sendMessage(
     Context.callee(),
@@ -334,7 +334,7 @@ export function payWinners50(binaryArgs: StaticArray<u8>): void {
     MAX_GAS_ASYNC_FT,
     ASC_FEE,
     0,
-    new Args().add(lotto.round.toString()).serialize(),
+    new Args().add(lotto.round.toString()).add(moneyWon.toString()).serialize(),
   );
 }
 
@@ -347,6 +347,8 @@ export function payWinners30(binaryArgs: StaticArray<u8>): void {
   generateEvent(`Start paying winners with 4 numbers`);
   const args = new Args(binaryArgs);
   const round = args.nextString().unwrap();
+  let sMoneyWon = args.nextString().unwrap();
+  let moneyWon = u64.parse(sMoneyWon);
 
   const lArgs = Storage.get(
     LOTTO_.concat(round),
@@ -358,14 +360,16 @@ export function payWinners30(binaryArgs: StaticArray<u8>): void {
   let thirty = u64.parse(Math.floor(deposit * 0.3 / winnersLength).toString());
   generateEvent(`Prize for 4 numbers - ${thirty} MAS`);
 
-
   if (lotto.winners30.length != 0) {
     let amount: u64 = thirty * 10 ** 9;
     for (let i = 0; i < lotto.winners30.length; i++) {
       generateEvent(`Sending prize for 4 numbers ${amount} MAS to ${lotto.winners30[i].address}`);
       transferCoins(new Address(lotto.winners30[i].address), amount);
+      moneyWon = moneyWon + thirty;
     }
   }
+
+  generateEvent(`Money won at 4 no ${moneyWon}`);
 
   sendMessage(
     Context.callee(),
@@ -377,7 +381,7 @@ export function payWinners30(binaryArgs: StaticArray<u8>): void {
     MAX_GAS_ASYNC_FT,
     ASC_FEE,
     0,
-    new Args().add(lotto.round.toString()).serialize(),
+    new Args().add(lotto.round.toString()).add(moneyWon.toString()).serialize(),
   );
 }
 
@@ -390,6 +394,8 @@ export function payWinners20(binaryArgs: StaticArray<u8>): void {
   generateEvent(`Start paying winners for 3 numbers`);
   const args = new Args(binaryArgs);
   const round = args.nextString().unwrap();
+  let sMoneyWon = args.nextString().unwrap();
+  let moneyWon = u64.parse(sMoneyWon);
 
   const lArgs = Storage.get(
     LOTTO_.concat(round),
@@ -406,8 +412,39 @@ export function payWinners20(binaryArgs: StaticArray<u8>): void {
     for (let i = 0; i < lotto.winners20.length; i++) {
       generateEvent(`Sending prize for 3 numbers ${amount} MAS to ${lotto.winners20[i].address}`);
       transferCoins(new Address(lotto.winners20[i].address), amount);
+      moneyWon = moneyWon + twenty;
     }
   }
+
+  generateEvent(`Money won at 3 no ${moneyWon}`);
+
+  let initialDeposit = lotto.deposit - moneyWon;
+  let initialDeposit2 = lotto.deposit - moneyWon;
+
+  initialDeposit = u64.parse(Math.floor(<number>initialDeposit * 0.8).toString());
+  const devs = u64.parse(Math.floor(<number>initialDeposit2 * 0.2).toString());
+
+  generateEvent(`Initial deposit for next round ${initialDeposit}`);
+  generateEvent(`Devs for coffee ${devs}`);
+
+  // send event in future to start new round
+  const validityStartPeriodNewRound =
+    Context.currentPeriod() + 18;
+  const validityEndPeriodNewRound =
+    Context.currentPeriod() + 19;
+  sendMessage(
+    Context.callee(),
+    'initLotto',
+    validityStartPeriodNewRound,
+    0,
+    validityEndPeriodNewRound,
+    31,
+    MAX_GAS_ASYNC_FT,
+    ASC_FEE,
+    0,
+    new Args().add(initialDeposit.toString()).serialize(),
+  );
+  generateEvent(`New round will start at ${validityStartPeriodNewRound} - ${validityEndPeriodNewRound} period`);
 }
 
 export function manualValidate(binaryArgs: StaticArray<u8>): void {
