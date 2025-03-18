@@ -6,6 +6,7 @@ import {
   sendMessage,
   Storage,
   transferCoins,
+  transferCoinsOf,
 } from '@massalabs/massa-as-sdk';
 import { Args, stringToBytes } from '@massalabs/as-types';
 import { onlyOwner } from '@massalabs/sc-standards/assembly/contracts/utils/ownership';
@@ -47,9 +48,9 @@ export function initLotto(): void {
 
   // init new lotto
   const startDate = Date.now();
-  const endDate = (startDate + 60 * 60 * 1000) - 16 * 1000;
+  const endDate = (startDate + 60 * 60 * 1000) - (16 * 1000);
   const ticketPrice = u8.parse(Storage.get(TICKET_PRICE));
-  const lotto = new Lotto(newLottoCount, startDate, endDate, ticketPrice, 0, [], [], [], []);
+  const lotto = new Lotto(newLottoCount, startDate, endDate, ticketPrice, 0, [], [], [], [], true);
   Storage.set(
     LOTTO_.concat(newLottoCount.toString()),
     lotto.serialize(),
@@ -64,9 +65,9 @@ export function initLotto(): void {
   sendMessage(
     Context.callee(),
     'finalizeLotto',
-    Context.currentPeriod() + 225,
+    validityStartPeriod,
     0,
-    Context.currentPeriod() + 226,
+    validityEndPeriod,
     31,
     MAX_GAS_ASYNC_FT,
     ASC_FEE,
@@ -94,26 +95,28 @@ export function getCurrentLotto(): StaticArray<u8> {
   const sLotto = Storage.get(LOTTO_.concat(lottoRoundCount.toString()));
   const lotto = Lotto.deserialize(sLotto);
   const dateNow = Date.now();
-  assert(dateNow < lotto.endDate, `Lottery round ${lottoRoundCount} is over`);
+  assert(dateNow < lotto.endDate && lotto.isActive, `Lottery round ${lottoRoundCount} is over`);
   return stringToBytes(sLotto);
 }
 
 export function getHistoryOfLotto(): StaticArray<u8> {
   const historyOfLotto: Lotto[] = [];
   const lottoRoundCount = Storage.get(LOTTO_ROUND_COUNT);
-  let iLottoRoundCount = u64.parse(lottoRoundCount) - 1;
+  let iLottoRoundCount = u64.parse(lottoRoundCount);
   let index = 1;
   while (index <= 5) {
     if (iLottoRoundCount > 0) {
       if (Storage.has(LOTTO_.concat(iLottoRoundCount.toString()))) {
         const sLotto = Storage.get(LOTTO_.concat(iLottoRoundCount.toString()));
         const lotto = Lotto.deserialize(sLotto);
-        historyOfLotto.push(lotto);
+        if (!lotto.isActive) {
+          historyOfLotto.push(lotto);
+          index = index + 1;
+        }
       }
-      index = index + 1;
       iLottoRoundCount = iLottoRoundCount - 1;
     } else {
-      index = 8;
+      index = 6;
     }
   }
   return stringToBytes(Lotto.serializeArray(historyOfLotto));
@@ -153,6 +156,12 @@ export function buyTicket(binaryArgs: StaticArray<u8>): void {
   const buyer = Context.caller().toString();
   const amount = u64.parse(lotto.price.toString()) * 10 ** 9;
   const buyerBalance = balanceOf(buyer);
+  const tAmount = Context.transferredCoins();
+  generateEvent(`Validate amounts of buyer ${amount} - ${tAmount} - ${buyerBalance}`);
+  assert(
+    tAmount >= amount,
+    `Invalid amount in SC call ${tAmount}`,
+  );
   assert(
     buyerBalance > amount,
     `Insufficient balance to buy ticket, current balance for ${buyer} is ${buyerBalance}
@@ -169,7 +178,7 @@ export function buyTicket(binaryArgs: StaticArray<u8>): void {
   Storage.set(LOTTO_.concat(lottoRoundCount.toString()), lotto.serialize());
   Storage.set(TICKET_.concat(newTicketCount.toString()), ticket.serialize());
   Storage.set(TICKET_COUNT, newTicketCount.toString());
-  generateEvent(`New ticket ${ticketCount} - ${ticket.serialize()} has successfully saved`);
+  generateEvent(`New ticket ${newTicketCount} - ${ticket.serialize()} has successfully saved`);
 }
 
 export function getTickets(): StaticArray<u8> {
@@ -213,6 +222,7 @@ export function finalizeLotto(): void {
   for (let i = 0; i < 5; i++) {
     lotto.winningNumbers.push(winningNumbers[i]);
   }
+
   let ticketCount = u8.parse(Storage.get(TICKET_COUNT));
   if (ticketCount === 0) {
     generateEvent(`No tickets were sold in lottery round ${lottoRoundCount}`);
@@ -233,6 +243,8 @@ export function finalizeLotto(): void {
       }
     }
   }
+
+  lotto.isActive = false;
   Storage.set(
     LOTTO_.concat(lottoRoundCount),
     lotto.serialize(),
@@ -408,7 +420,7 @@ export function manualValidate(binaryArgs: StaticArray<u8>): void {
   const amount = args.nextString()
     .expect('Missing second arguments');
 
-  transferCoins(new Address(address), u64.parse(amount) * 10 ** 9);
+  transferCoinsOf(new Address(Context.callee().toString()), new Address(address), u64.parse(amount) * 10 ** 9);
 }
 
 // @ts-ignore
