@@ -18,18 +18,18 @@ const provider = Web3Provider.buildnet(account);
 
 const sc = new SmartContract(provider, CONTRACT_ADDR);
 
-let args = new Args().addString('AU1jHByejYjrarym3RwcvXk8KAKeXFzpfqPZcH3TirZF5cj5cZKY').addString('2');
+// let args = new Args().addString('100');
+//
+// await sc
+//   .call('updateTicketPrice', args, { fee: Mas.fromString('0.01') })
+//   .then((value) => {
+//     console.log(value);
+//   });
+const messageBin = await sc.read('getTicketPrice');
 
-await sc
-  .call('manualValidate', args, { fee: Mas.fromString('0.01') })
-  .then((value) => {
-    console.log(value);
-  });
-// const messageBin = await sc.read('getCurrentLotto');
-//
-// const result = bytesToStr(messageBin.value);
-//
-// console.log(`Received from the sc: ${result}`);
+const result = bytesToStr(messageBin.value);
+
+console.log(`Received from the sc: ${result}`);
 // console.log(`Received from the sc: ${messageBin.info.error}`);
 //
 // const messageBin2 = await sc.read('getHistoryOfLotto');

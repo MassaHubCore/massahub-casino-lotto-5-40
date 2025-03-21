@@ -9,12 +9,15 @@ export class Lotto {
   price: u8;
   deposit: u64;
   initialDeposit: u64;
-  moneyWon: u64;
-  winningNumbers: u8[];
-  winners50: Ticket[];
-  winners30: Ticket[];
-  winners20: Ticket[];
-  isActive: boolean;
+  tokensWon: u64 = 0;
+  winningNumbers: u8[] = [];
+  winners50: Ticket[] = [];
+  winners50Amount: u64 = 0;
+  winners30: Ticket[] = [];
+  winners30Amount: u64 = 0;
+  winners20: Ticket[] = [];
+  winners20Amount: u64 = 0;
+  isActive: boolean = true;
 
   constructor(
     round: u64,
@@ -23,12 +26,6 @@ export class Lotto {
     price: u8,
     deposit: u64,
     initialDeposit: u64,
-    moneyWon: u64,
-    winningNumbers: u8[],
-    winners50: Ticket[],
-    winners30: Ticket[],
-    winners20: Ticket[],
-    isActive: boolean,
   ) {
     this.round = round;
     this.startDate = startDate;
@@ -36,12 +33,6 @@ export class Lotto {
     this.price = price;
     this.deposit = deposit;
     this.initialDeposit = initialDeposit;
-    this.moneyWon = moneyWon;
-    this.winningNumbers = winningNumbers;
-    this.winners50 = winners50;
-    this.winners30 = winners30;
-    this.winners20 = winners20;
-    this.isActive = isActive;
   }
 
   public static deserialize(data: string): Lotto {
