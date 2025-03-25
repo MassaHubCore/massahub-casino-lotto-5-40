@@ -12,6 +12,7 @@ import { onlyOwner } from '@massalabs/sc-standards/assembly/contracts/utils/owne
 import {
   ASC_FEE,
   LOTTO_,
+  LOTTO_HOUR_INTERVAL,
   LOTTO_ROUND_COUNT,
   MAX_GAS_ASYNC_FT,
   OWNER,
@@ -28,7 +29,8 @@ export function constructor(_: StaticArray<u8>): void {
   Storage.set(OWNER, Context.caller().toString());
   Storage.set(LOTTO_ROUND_COUNT, '0');
   Storage.set(TICKET_COUNT, '0');
-  Storage.set(TICKET_PRICE, '10');
+  Storage.set(TICKET_PRICE, '50');
+  Storage.set(LOTTO_HOUR_INTERVAL, '24');
   const args = new Args().add('0').serialize();
   initLotto(args);
 }
@@ -51,8 +53,10 @@ export function initLotto(binaryArgs: StaticArray<u8>): void {
   Storage.set(LOTTO_ROUND_COUNT, newLottoCount.toString());
 
   // init new lotto
+  const sHours = Storage.get(LOTTO_HOUR_INTERVAL);
+  const hours = u64.parse(sHours);
   const startDate = Date.now();
-  const endDate = (startDate + 8 * 60 * 60 * 1000) - (16 * 1000);
+  const endDate = (startDate + hours * 60 * 60 * 1000) - (16 * 1000);
   const ticketPrice = u8.parse(Storage.get(TICKET_PRICE));
   const lotto = new Lotto(
     newLottoCount,
@@ -60,7 +64,7 @@ export function initLotto(binaryArgs: StaticArray<u8>): void {
     endDate,
     ticketPrice,
     initialDeposit,
-    initialDeposit
+    initialDeposit,
   );
   Storage.set(
     LOTTO_.concat(newLottoCount.toString()),
@@ -70,9 +74,9 @@ export function initLotto(binaryArgs: StaticArray<u8>): void {
 
   // send event in future to finalize lotto
   const validityStartPeriod =
-    Context.currentPeriod() + 225;
+    Context.currentPeriod() + (hours * 60 * 60) / 16;
   const validityEndPeriod =
-    Context.currentPeriod() + 226;
+    validityStartPeriod + 1;
   sendMessage(
     Context.callee(),
     'finalizeLotto',
@@ -88,17 +92,30 @@ export function initLotto(binaryArgs: StaticArray<u8>): void {
   generateEvent(`Lottery ${newLottoCount} will be finalized in ${validityStartPeriod} - ${validityEndPeriod} period`);
 }
 
-export function getTicketPrice(): StaticArray<u8> {
+export function adminGetTicketPrice(): StaticArray<u8> {
   onlyOwner();
   return stringToBytes(Storage.get(TICKET_PRICE));
 }
 
-export function updateTicketPrice(binaryArgs: StaticArray<u8>): void {
+export function adminUpdateTicketPrice(binaryArgs: StaticArray<u8>): void {
   onlyOwner();
   const args = new Args(binaryArgs);
   const price = args.nextString()
     .expect('Missing price');
   Storage.set(TICKET_PRICE, price);
+}
+
+export function adminGetLottoHourInterval(): StaticArray<u8> {
+  onlyOwner();
+  return stringToBytes(Storage.get(LOTTO_HOUR_INTERVAL));
+}
+
+export function adminUpdateLottoHourInterval(binaryArgs: StaticArray<u8>): void {
+  onlyOwner();
+  const args = new Args(binaryArgs);
+  const hours = args.nextString()
+    .expect('Missing hours');
+  Storage.set(LOTTO_HOUR_INTERVAL, hours);
 }
 
 export function getCurrentLotto(): StaticArray<u8> {
@@ -108,6 +125,19 @@ export function getCurrentLotto(): StaticArray<u8> {
   const dateNow = Date.now();
   assert(dateNow < lotto.endDate && lotto.isActive, `Lottery round ${lottoRoundCount} is over`);
   return stringToBytes(sLotto);
+}
+
+export function adminUpdateLottoDeposit(binaryArgs: StaticArray<u8>) {
+  onlyOwner();
+  const args = new Args(binaryArgs);
+  const sDeposit = args.nextString()
+    .expect('Missing deposit');
+  const deposit = u64.parse(sDeposit);
+  const lottoRoundCount = Storage.get(LOTTO_ROUND_COUNT);
+  const sLotto = Storage.get(LOTTO_.concat(lottoRoundCount.toString()));
+  const lotto = Lotto.deserialize(sLotto);
+  lotto.deposit = deposit;
+  Storage.set(LOTTO_.concat(lottoRoundCount), lotto.serialize());
 }
 
 export function getHistoryOfLotto(): StaticArray<u8> {
@@ -416,8 +446,8 @@ export function payWinners20(binaryArgs: StaticArray<u8>): void {
   const remainingDeposit = u64.parse(Math.floor(<number>initialDeposit * 0.9).toString());
   const devs = u64.parse(Math.floor(<number>initialDeposit * 0.09).toString());
 
-  generateEvent(`Initial deposit for next round ${initialDeposit}`);
-  generateEvent(`Devs for coffee ${devs}`);
+  generateEvent(`Initial deposit for next round ${remainingDeposit} MAS`);
+  generateEvent(`Devs for coffee ${devs} MAS`);
 
   // send event in future to start new round
   const validityStartPeriodNewRound =
@@ -439,7 +469,7 @@ export function payWinners20(binaryArgs: StaticArray<u8>): void {
   generateEvent(`New round will start at ${validityStartPeriodNewRound} - ${validityEndPeriodNewRound} period`);
 }
 
-export function manualValidate(binaryArgs: StaticArray<u8>): void {
+export function adminPayWinner(binaryArgs: StaticArray<u8>): void {
   onlyOwner();
 
   const args = new Args(binaryArgs);

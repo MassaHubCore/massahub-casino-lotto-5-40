@@ -7,18 +7,16 @@ import {
   Web3Provider,
 } from '@massalabs/massa-web3';
 import 'dotenv/config';
-import { buyTicket, getTicketPrice, getTickets } from '../assembly/contracts/lotto-4-50';
-import { Ticket } from '../assembly/contracts/serializable/Ticket';
 
 // Paste the address of the deployed contract here
-const CONTRACT_ADDR = 'AS19rcrNwbKcwrxu86G961H6EZjdboZkpoEgV1WEsfJofDfKVNB9';
+const CONTRACT_ADDR = 'AS1HTj6FQkNT8hFdEVxUfB1rkbRWuZ97Vgx41aHPxXh2fNMKh4jp';
 
 const account = await Account.fromEnv();
 const provider = Web3Provider.buildnet(account);
 
 const sc = new SmartContract(provider, CONTRACT_ADDR);
 
-// let args = new Args().addString('100');
+// let args = new Args().addString('50');
 //
 // await sc
 //   .call('updateTicketPrice', args, { fee: Mas.fromString('0.01') })
