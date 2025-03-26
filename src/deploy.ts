@@ -9,7 +9,7 @@ import {
 import { getScByteCode } from './utils';
 
 const account = await Account.fromEnv();
-const provider = Web3Provider.buildnet(account);
+const provider = Web3Provider.mainnet(account);
 
 console.log('Deploying contract...');
 

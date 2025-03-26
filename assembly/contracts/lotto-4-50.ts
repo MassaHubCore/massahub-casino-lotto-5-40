@@ -6,6 +6,7 @@ import {
   Storage,
   transferCoins,
   transferCoinsOf,
+  setBytecode
 } from '@massalabs/massa-as-sdk';
 import { Args, stringToBytes } from '@massalabs/as-types';
 import { onlyOwner } from '@massalabs/sc-standards/assembly/contracts/utils/ownership';
@@ -32,7 +33,24 @@ export function constructor(_: StaticArray<u8>): void {
   Storage.set(TICKET_PRICE, '50');
   Storage.set(LOTTO_HOUR_INTERVAL, '24');
   const args = new Args().add('0').serialize();
-  initLotto(args);
+  const validityStartPeriodNewRound =
+    Context.currentPeriod() + 18;
+  const validityEndPeriodNewRound =
+    Context.currentPeriod() + 19;
+  sendMessage(
+    Context.callee(),
+    'initLotto',
+    validityStartPeriodNewRound,
+    0,
+    validityEndPeriodNewRound,
+    31,
+    MAX_GAS_ASYNC_FT,
+    ASC_FEE,
+    0,
+    args,
+  );
+
+  generateEvent(`New round will start at ${validityStartPeriodNewRound} - ${validityEndPeriodNewRound} period`);
 }
 
 export function initLotto(binaryArgs: StaticArray<u8>): void {
@@ -127,7 +145,7 @@ export function getCurrentLotto(): StaticArray<u8> {
   return stringToBytes(sLotto);
 }
 
-export function adminUpdateLottoDeposit(binaryArgs: StaticArray<u8>) {
+export function adminUpdateLottoDeposit(binaryArgs: StaticArray<u8>): void {
   onlyOwner();
   const args = new Args(binaryArgs);
   const sDeposit = args.nextString()
@@ -306,7 +324,7 @@ export function finalizeLotto(): void {
     0,
     new Args().add(lotto.round.toString()).serialize(),
   );
-  generateEvent(`Start paying at ${validityStartPeriodP} - ${validityEndPeriodP} period`);
+  generateEvent(`Start paying jackpot at ${validityStartPeriodP} - ${validityEndPeriodP} period`);
 }
 
 export function payWinners50(binaryArgs: StaticArray<u8>): void {
@@ -342,18 +360,25 @@ export function payWinners50(binaryArgs: StaticArray<u8>): void {
 
   generateEvent(`Tokens won at jackpot ${tokensWon}`);
 
+  const validityStartPeriodP =
+    Context.currentPeriod() + 1;
+  const validityEndPeriodP =
+    Context.currentPeriod() + 2;
+
   sendMessage(
     Context.callee(),
     'payWinners30',
-    Context.currentPeriod() + 1,
+    validityStartPeriodP,
     0,
-    Context.currentPeriod() + 2,
+    validityEndPeriodP,
     31,
     MAX_GAS_ASYNC_FT,
     ASC_FEE,
     0,
     new Args().add(lotto.round.toString()).add(tokensWon.toString()).serialize(),
   );
+
+  generateEvent(`Start paying 30 at ${validityStartPeriodP} - ${validityEndPeriodP} period`);
 }
 
 export function payWinners30(binaryArgs: StaticArray<u8>): void {
@@ -391,18 +416,25 @@ export function payWinners30(binaryArgs: StaticArray<u8>): void {
 
   generateEvent(`Money won at 4 no ${tokensWon}`);
 
+  const validityStartPeriodP =
+    Context.currentPeriod() + 1;
+  const validityEndPeriodP =
+    Context.currentPeriod() + 2;
+
   sendMessage(
     Context.callee(),
     'payWinners20',
-    Context.currentPeriod() + 1,
+    validityStartPeriodP,
     0,
-    Context.currentPeriod() + 2,
+    validityEndPeriodP,
     31,
     MAX_GAS_ASYNC_FT,
     ASC_FEE,
     0,
     new Args().add(lotto.round.toString()).add(tokensWon.toString()).serialize(),
   );
+
+  generateEvent(`Start paying 20 at ${validityStartPeriodP} - ${validityEndPeriodP} period`);
 }
 
 export function payWinners20(binaryArgs: StaticArray<u8>): void {
@@ -480,6 +512,11 @@ export function adminPayWinner(binaryArgs: StaticArray<u8>): void {
     .expect('Missing second arguments');
 
   transferCoinsOf(new Address(Context.callee().toString()), new Address(address), u64.parse(amount) * 10 ** 9);
+}
+
+export function adminUpgradeSmartContract(newBytecode: StaticArray<u8>): void {
+  onlyOwner();
+  setBytecode(newBytecode);
 }
 
 // @ts-ignore
