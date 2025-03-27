@@ -5,5 +5,5 @@ export const LOTTO_ = 'LOTTO_';
 export const LOTTO_HOUR_INTERVAL = 'LOTTO_HOUR_INTERVAL';
 export const TICKET_ = 'TICKET_';
 export const TICKET_PRICE = 'TICKET_PRICE';
-export const MAX_GAS_ASYNC_FT = 10_000_000;
+export const MAX_GAS_ASYNC_FT = 7_000_000_000;
 export const ASC_FEE = 30_000_000;

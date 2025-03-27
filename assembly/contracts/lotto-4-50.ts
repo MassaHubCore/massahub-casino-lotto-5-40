@@ -30,7 +30,7 @@ export function constructor(_: StaticArray<u8>): void {
   Storage.set(OWNER, Context.caller().toString());
   Storage.set(LOTTO_ROUND_COUNT, '0');
   Storage.set(TICKET_COUNT, '0');
-  Storage.set(TICKET_PRICE, '50');
+  Storage.set(TICKET_PRICE, '25');
   Storage.set(LOTTO_HOUR_INTERVAL, '24');
   const args = new Args().add('0').serialize();
   const validityStartPeriodNewRound =
