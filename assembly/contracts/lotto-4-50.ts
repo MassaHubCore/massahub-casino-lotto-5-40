@@ -3,10 +3,10 @@ import {
   Context,
   generateEvent,
   sendMessage,
+  setBytecode,
   Storage,
   transferCoins,
   transferCoinsOf,
-  setBytecode
 } from '@massalabs/massa-as-sdk';
 import { Args, stringToBytes } from '@massalabs/as-types';
 import { onlyOwner } from '@massalabs/sc-standards/assembly/contracts/utils/ownership';
@@ -475,11 +475,13 @@ export function payWinners20(binaryArgs: StaticArray<u8>): void {
 
   const initialDeposit = lotto.deposit - tokensWon;
 
-  const remainingDeposit = u64.parse(Math.floor(<number>initialDeposit * 0.9).toString());
-  const devs = u64.parse(Math.floor(<number>initialDeposit * 0.09).toString());
+  const remainingDeposit = u64.parse(Math.floor(<number>initialDeposit * 0.95).toString());
+  const devsAmount = u64.parse(Math.floor(<number>initialDeposit * 0.05).toString());
+
+  transferCoins(new Address(owner), devsAmount * 10 ** 9);
 
   generateEvent(`Initial deposit for next round ${remainingDeposit} MAS`);
-  generateEvent(`Devs for coffee ${devs} MAS`);
+  generateEvent(`Devs for coffee ${devsAmount} MAS`);
 
   // send event in future to start new round
   const validityStartPeriodNewRound =
