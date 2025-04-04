@@ -519,6 +519,7 @@ export function adminPayWinner(binaryArgs: StaticArray<u8>): void {
 export function adminUpgradeSmartContract(newBytecode: StaticArray<u8>): void {
   onlyOwner();
   setBytecode(newBytecode);
+  generateEvent("Contract successfully updated");
 }
 
 // @ts-ignore
