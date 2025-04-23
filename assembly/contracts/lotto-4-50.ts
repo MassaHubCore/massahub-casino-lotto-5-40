@@ -75,7 +75,7 @@ export function initLotto(binaryArgs: StaticArray<u8>): void {
   const hours = u64.parse(sHours);
   const startDate = Date.now();
   const endDate = (startDate + hours * 60 * 60 * 1000) - (16 * 1000);
-  const ticketPrice = u64(Math.round(<number>initialDeposit * 0.1));
+  const ticketPrice = u64(Math.round(<number>initialDeposit * 0.01));
   const lotto = new Lotto(
     newLottoCount,
     startDate,
