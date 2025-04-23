@@ -75,7 +75,7 @@ export function initLotto(binaryArgs: StaticArray<u8>): void {
   const hours = u64.parse(sHours);
   const startDate = Date.now();
   const endDate = (startDate + hours * 60 * 60 * 1000) - (16 * 1000);
-  const ticketPrice = u8.parse(Storage.get(TICKET_PRICE));
+  const ticketPrice = u64(Math.round(<number>initialDeposit * 0.1));
   const lotto = new Lotto(
     newLottoCount,
     startDate,
@@ -221,7 +221,7 @@ export function buyTicket(binaryArgs: StaticArray<u8>): void {
 
   // saving ticket, ticket count and lotto deposit in storage
   ticket.address = buyer;
-  const ticketCount = u8.parse(Storage.get(TICKET_COUNT));
+  const ticketCount = u64.parse(Storage.get(TICKET_COUNT));
   const newTicketCount = ticketCount + 1;
   ticket.no = newTicketCount;
   lotto.deposit = lotto.deposit + lotto.price;
@@ -234,8 +234,8 @@ export function buyTicket(binaryArgs: StaticArray<u8>): void {
 export function getTickets(): StaticArray<u8> {
   const response: Ticket[] = [];
   const address = Context.caller().toString();
-  const ticketCount = u8.parse(Storage.get(TICKET_COUNT));
-  for (let i: u8 = 1; i <= ticketCount; i++) {
+  const ticketCount = u64.parse(Storage.get(TICKET_COUNT));
+  for (let i: u64 = 1; i <= ticketCount; i++) {
     if (Storage.has(TICKET_.concat(i.toString()))) {
       const args = Storage.get(
         TICKET_.concat(i.toString()),
@@ -273,11 +273,11 @@ export function finalizeLotto(): void {
     lotto.winningNumbers.push(winningNumbers[i]);
   }
 
-  let ticketCount = u8.parse(Storage.get(TICKET_COUNT));
+  let ticketCount = u64.parse(Storage.get(TICKET_COUNT));
   if (ticketCount === 0) {
     generateEvent(`No tickets were sold in lottery round ${lottoRoundCount}`);
   } else {
-    for (let i: u8 = 1; i <= ticketCount; i++) {
+    for (let i: u64 = 1; i <= ticketCount; i++) {
       if (Storage.has(TICKET_.concat(i.toString()))) {
         const args = Storage.get(
           TICKET_.concat(i.toString()),
@@ -302,7 +302,7 @@ export function finalizeLotto(): void {
 
   // cleaning old tickets
   generateEvent(`Cleaning ticket storage...`);
-  for (let i: u8 = 1; i <= ticketCount; i++) {
+  for (let i: u64 = 1; i <= ticketCount; i++) {
     Storage.del(TICKET_.concat(i.toString()));
   }
   Storage.set(TICKET_COUNT, '0');

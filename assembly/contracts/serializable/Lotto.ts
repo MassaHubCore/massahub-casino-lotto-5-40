@@ -6,7 +6,7 @@ export class Lotto {
   round: u64;
   startDate: i64;
   endDate: i64;
-  price: u8;
+  price: u64;
   deposit: u64;
   initialDeposit: u64;
   tokensWon: u64 = 0;
@@ -23,7 +23,7 @@ export class Lotto {
     round: u64,
     startDate: u64,
     endDate: u64,
-    price: u8,
+    price: u64,
     deposit: u64,
     initialDeposit: u64,
   ) {
