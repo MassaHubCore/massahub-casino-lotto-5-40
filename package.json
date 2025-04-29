@@ -7,6 +7,7 @@
         "test": "asp --summary",
         "build": "massa-as-compile",
         "clean": "rimraf build",
+        "test-sc": "npm run build && tsx src/test.ts",
         "deploy": "npm run build && tsx src/deploy.ts",
         "update": "npm run build && tsx src/update.ts",
         "prettier": "prettier '**/src/**/*.ts' --check && as-prettier --check assembly",

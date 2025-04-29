@@ -181,6 +181,27 @@ export function getHistoryOfLotto(): StaticArray<u8> {
   return stringToBytes(Lotto.serializeArray(historyOfLotto));
 }
 
+export function supplyDeposit(binaryArgs: StaticArray<u8>): void {
+  const args = new Args(binaryArgs);
+  const sDeposit = args.nextString()
+    .expect('Missing supply deposit');
+
+  const amount = u64.parse(sDeposit) * 10 ** 9;
+  assert(
+    Context.transferredCoins() >= amount,
+    `Invalid amount in SC call ${Context.transferredCoins()}`,
+  );
+
+  transferCoins(Context.callee(), amount);
+
+  const lottoRoundCount = Storage.get(LOTTO_ROUND_COUNT);
+  const sLotto = Storage.get(LOTTO_.concat(lottoRoundCount.toString()));
+  const lotto = Lotto.deserialize(sLotto);
+  lotto.deposit = lotto.deposit + u64.parse(sDeposit);
+  Storage.set(LOTTO_.concat(lottoRoundCount.toString()), lotto.serialize());
+  generateEvent(`Supplying ${amount} MAS to lottery round ${lottoRoundCount}`);
+}
+
 export function buyTicket(binaryArgs: StaticArray<u8>): void {
   // check if lotto is active
   const lottoRoundCount = Storage.get(LOTTO_ROUND_COUNT);
